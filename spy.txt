@@ -1,0 +1,343 @@
+#include <math.h>        
+#include <stdio.h>
+#include <stdlib.h>        
+#include "Glut.h"
+
+// Jedinstvena deklaracija pozicije igrača
+float playerX = 400.0f; // X pozicija igrača 
+float playerY = 50.0f;  // Početna Y pozicija igrača
+float obstacleX = 300;  // Početna X pozicija prepreke
+float obstacleY = 600;  // Početna Y pozicija prepreke
+int score = 0;  // Početni broj poena
+int lives = 3;  // Početni broj života
+int level = 1;  // Početni nivo
+
+float bonusLifeX = 0;
+float bonusLifeY = 0;
+bool bonusLifeActive = false;
+
+float civilianX = 400.0f;  // Početna X pozicija civilnog vozila
+float civilianY = 600.0f;  // Početna Y pozicija civilnog vozila 
+bool isCivilianActive = false;  // Da li je civilno vozilo aktivno
+
+
+// Pozicija i status metka
+float bulletX = 0;
+float bulletY = 0;
+bool bulletFired = false;  // Da li je metak ispaljen?
+
+void init() {
+    glClearColor(0.0, 0.0, 0.0, 1.0);  // Crna boja pozadine
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 800, 0, 600);  // Dvodimenzionalne koordinate ekrana
+}
+
+
+
+void displayScore() {
+    char scoreStr[50];
+    sprintf_s(scoreStr, "Poeni: %d", score);
+    glColor3f(1.0, 1.0, 1.0);  // Bela boja teksta
+    glRasterPos2f(10, 570);  // Pozicija na ekranu
+    for (int i = 0; scoreStr[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, scoreStr[i]);
+    }
+}
+
+void displayLives() {
+    char livesStr[50];
+    sprintf_s(livesStr, "Životi: %d", lives);
+    glColor3f(1.0, 1.0, 1.0);  // Bela boja teksta
+    glRasterPos2f(10, 550);  // Pozicija na ekranu
+    for (int i = 0; livesStr[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, livesStr[i]);
+    }
+}
+
+void displayLevel() {
+    char levelStr[50];
+    sprintf_s(levelStr, "Nivo: %d", level);
+    glColor3f(1.0, 1.0, 1.0);  // Bela boja teksta
+    glRasterPos2f(10, 530);  // Pozicija na ekranu
+    for (int i = 0; levelStr[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, levelStr[i]);
+    }
+}
+
+void drawBonusLife() {
+    if (bonusLifeActive) {
+        glColor3f(1.0, 0.0, 1.0);  // Ljubičasta boja za bonus život
+        glBegin(GL_POLYGON);
+        glVertex2f(bonusLifeX, bonusLifeY);
+        glVertex2f(bonusLifeX + 20, bonusLifeY);
+        glVertex2f(bonusLifeX + 20, bonusLifeY + 20);
+        glVertex2f(bonusLifeX, bonusLifeY + 20);
+        glEnd();
+    }
+}
+
+// Funkcija za crtanje metka
+void drawBullet() {
+    if (bulletFired) {
+        glColor3f(1.0, 1.0, 0.0);  // Žuta boja metka
+        glBegin(GL_POLYGON);
+        glVertex2f(bulletX, bulletY);
+        glVertex2f(bulletX + 10, bulletY);
+        glVertex2f(bulletX + 10, bulletY + 20);
+        glVertex2f(bulletX, bulletY + 20);
+        glEnd();
+    }
+}
+void drawCivilian() {
+    if (isCivilianActive) {
+        glColor3f(0.0, 0.0, 1.0);  // Plava boja za civilno vozilo
+        glBegin(GL_POLYGON);
+        glVertex2f(civilianX, civilianY);       // Donji levi ugao
+        glVertex2f(civilianX + 60, civilianY);  // Donji desni ugao
+        glVertex2f(civilianX + 60, civilianY + 100); // Gornji desni ugao
+        glVertex2f(civilianX, civilianY + 100); // Gornji levi ugao
+        glEnd();
+    }
+}
+
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Crtanje puta
+    glColor3f(0.5, 0.5, 0.5);  // Siva boja puta
+    glBegin(GL_POLYGON);
+    glVertex2f(200, 0);
+    glVertex2f(600, 0);
+    glVertex2f(600, 600);
+    glVertex2f(200, 600);
+    glEnd();
+
+    // Crtanje belih linija (sredina puta)
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINES);
+    for (int i = 0; i < 600; i += 100) {
+        glVertex2f(400, i);
+        glVertex2f(400, i + 50);
+    }
+    glEnd();
+
+    // Crtanje vozila igrača
+    glColor3f(1.0, 0.0, 0.0);  // Crvena boja vozila igrača
+    glBegin(GL_POLYGON);
+    glVertex2f(playerX, playerY);              // Donji levi ugao
+    glVertex2f(playerX + 60, playerY);         // Donji desni ugao
+    glVertex2f(playerX + 60, playerY + 100);   // Gornji desni ugao
+    glVertex2f(playerX, playerY + 100);        // Gornji levi ugao
+    glEnd();
+
+    // Crtanje neprijateljskog vozila (prepreke)
+    glColor3f(0.0, 1.0, 0.0);  // Zelena boja neprijatelja
+    glBegin(GL_POLYGON);
+    glVertex2f(obstacleX, obstacleY);       // Donji levi ugao
+    glVertex2f(obstacleX + 60, obstacleY);  // Donji desni ugao
+    glVertex2f(obstacleX + 60, obstacleY + 100); // Gornji desni ugao
+    glVertex2f(obstacleX, obstacleY + 100); // Gornji levi ugao
+    glEnd();
+
+    displayScore();  // Prikaz poena
+    displayLives();  // Prikaz broja života
+    displayLevel();  // Prikaz trenutnog nivoa
+    drawBullet(); // Crtanje metka
+    drawBonusLife();  // Crtanje bonus života
+    drawCivilian();  // Crtanje civilnog vozila
+
+
+    glFlush();
+}
+
+// Funkcija za kretanje metka
+void updateBullet(int value) {
+    if (bulletFired) {
+        bulletY += 10;  // Metak se kreće prema gore
+        if (bulletY > 600) {  // Ako metak izađe sa ekrana
+            bulletFired = false;  // Reset metka
+        }
+
+        // Proveri da li je metak pogodio neprijatelja
+        if (bulletX > obstacleX && bulletX < obstacleX + 60 && bulletY > obstacleY && bulletY < obstacleY + 100) {
+            score += 10;  // Dodaj poene
+            printf("Pogodak! Poeni: %d\n", score);
+            bulletFired = false;  // Reset metka
+            obstacleY = 600;  // Resetuj neprijatelja
+            obstacleX = 200 + rand() % 400;  // Nasumična X pozicija neprijatelja
+        }
+    }
+
+    // Provera da li je metak pogodio civilno vozilo
+    if (bulletX > civilianX && bulletX < civilianX + 60 && bulletY > civilianY && bulletY < civilianY + 100) {
+        score -= 20;  // Oduzimanje poena
+        printf("Pucao si na civilno vozilo! Poeni: %d\n", score);
+        bulletFired = false;  // Reset metka
+        isCivilianActive = false;  // Civilno vozilo nestaje nakon pogodka
+        civilianY = 600;  
+    }
+
+    glutPostRedisplay();  
+    glutTimerFunc(50, updateBullet, 0);  // Postavi tajmer za sledeće ažuriranje
+}
+
+
+
+void handleKeys(int key, int x, int y) {
+    switch (key) {
+    case GLUT_KEY_UP:
+        if (playerY + 10 < 500) { // Ograničava kretanje prema vrhu
+            playerY += 10.0f;
+        }
+        break;
+    case GLUT_KEY_DOWN:
+        if (playerY - 10 > 0) {  // Ograničava kretanje prema dnu
+            playerY -= 10.0f;
+        }
+        break;
+    case GLUT_KEY_LEFT:
+        if (playerX > 0) {
+            playerX -= 10.0f;
+        }
+        break;
+    case GLUT_KEY_RIGHT:
+        if (playerX < 740) {  // Ograničenje za desnu stranu
+            playerX += 10.0f;
+        }
+        break;
+    }
+
+   
+    glutPostRedisplay();  // Ponovno iscrtavanje
+}
+void handleKeyboard(unsigned char key, int x, int y) {
+    if (key == ' ') {  // Ako se pritisne SPACE taster
+        if (!bulletFired) {  // Ako metak već nije ispaljen
+            bulletFired = true;
+            bulletX = playerX + 25;  // Postavi metak iznad vozila igrača
+            bulletY = playerY + 100;
+        }
+    }
+    glutPostRedisplay();  // Ponovno iscrtavanje
+}
+
+bool checkCollision() {
+    if (playerX < obstacleX + 60 && playerX + 60 > obstacleX &&
+        playerY < obstacleY + 100 && playerY + 100 > obstacleY) {
+        lives--;  // Gubiš život
+        printf("Životi preostali: %d\n", lives);
+        if (lives <= 0) {
+            printf("Kraj igre! Izgubio si sve živote.\n");
+            exit(0);  // Izađi iz igre
+        }
+        return true;
+    }
+    return false;
+}
+
+void update(int value) {
+    obstacleY -= 10 + (level * 2);  // Prepreke se brže kreću sa svakim nivoom
+
+    if (score >= 50 * level) {  
+        level++;  // Povećaj nivo na svakih 50 poena
+        printf("Nivo: %d\n", level);
+    }
+
+
+    if (checkCollision()) {
+        printf("Sudar! Izgubio si život!\n");
+        obstacleY = 600;  // Resetuj prepreku
+    }
+    
+
+    if (obstacleY < -100) {
+        obstacleY = 600;
+        obstacleX = 200 + rand() % 400;  // Nasumična X pozicija prepreke
+    }
+
+
+    // Proveri da li je neprijatelj izašao sa ekrana
+    if (obstacleY < -100) {
+        score -= 10;  // Oduzimanje poena ako neprijatelj pobegne
+        printf("Neprijatelj ti je pobegao! Poeni: %d\n", score);
+
+        // Reset neprijatelja
+        obstacleY = 600;
+        obstacleX = 200 + rand() % 400;  // Nasumična X pozicija neprijatelja
+    }
+
+
+    // Ako je nivo deljiv sa 3, pojavi se bonus život
+    if (level % 3 == 0 && !bonusLifeActive) {
+        bonusLifeActive = true;
+        bonusLifeX = 200 + rand() % 400;  // Nasumična X pozicija
+        bonusLifeY = 600;  // Postavi iznad ekrana
+    }
+
+    // Ako je bonus život aktivan, pomeraj ga nadole
+    if (bonusLifeActive) {
+        bonusLifeY -= 5;
+        if (bonusLifeY < 0) {
+            bonusLifeActive = false;  // Ukloni bonus život ako izađe sa ekrana
+        }
+
+        // Provera da li igrač pokupi bonus život
+        if (bonusLifeX < playerX + 60 && bonusLifeX + 20 > playerX &&
+            bonusLifeY < playerY + 100 && bonusLifeY + 20 > playerY) {
+            lives++;  // Igrač dobija dodatni život
+            printf("Bonus život! Trenutni životi: %d\n", lives);
+            bonusLifeActive = false;  // Ukloni bonus život nakon sakupljanja
+        }
+    }
+
+
+    // Kretanje civilnog vozila
+    if (isCivilianActive) {
+        civilianY -= 5 + (level * 1.5);  // Brzina kretanja civilnog vozila
+
+        // Provera sudara sa civilnim vozilom
+        if (playerX < civilianX + 60 && playerX + 60 > civilianX &&
+            playerY < civilianY + 100 && playerY + 100 > civilianY) {
+            printf("Sudario si se sa civilnim vozilom!\n");
+            score -= 20;  // Oduzimanje poena
+            lives--;  // Igrač gubi život
+            printf("Poeni: %d, Životi preostali: %d\n", score, lives);
+            isCivilianActive = false;  // Deaktiviraj civilno vozilo nakon sudara
+            civilianY = 600;  // Resetuj poziciju civilnog vozila
+
+            if (lives <= 0) {
+                printf("Kraj igre! Izgubio si sve živote.\n");
+                exit(0);  // Izađi iz igre
+            }
+        }
+
+    }
+
+    if (level >= 2 && level % 2 == 0 && !isCivilianActive) {  // Civilno vozilo se pojavljuje od nivoa 2
+        isCivilianActive = true;
+        civilianX = 200 + rand() % 400;  // Nasumična X pozicija
+    }
+
+
+    glutPostRedisplay();  // Ponovo iscrtava ekran nakon ažuriranja
+    glutTimerFunc(100, update, 0);  // Postavlja novi tajmer za ažuriranje
+}
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutInitWindowSize(800, 600);
+    glutCreateWindow("Spy Hunter");
+    init();
+    glutDisplayFunc(display);        
+    glutSpecialFunc(handleKeys);     
+    glutKeyboardFunc(handleKeyboard);  
+    glutTimerFunc(50, updateBullet, 0);  // Tajmer za ažuriranje metka
+    glutTimerFunc(100, update, 0);   // Tajmer za ažuriranje prepreka
+
+    glutMainLoop();  
+    return 0;
+}
+
